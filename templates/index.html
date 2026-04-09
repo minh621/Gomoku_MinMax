@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gomoku AI</title>
+    <style>
+        body { font-family: Arial; }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(15, 30px);
+            margin-top: 20px;
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid black;
+            text-align: center;
+            line-height: 30px;
+            cursor: pointer;
+        }
+
+        button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Gomoku AI (Minimax)</h2>
+
+<button onclick="startGame('human')">Đi trước</button>
+<button onclick="startGame('ai')">Đi sau</button>
+<button onclick="resetGame()">Reset</button>
+
+<h3 id="status"></h3>
+
+<div class="board" id="board"></div>
+
+<script>
+    const boardDiv = document.getElementById("board");
+
+    // tạo bàn cờ
+    for (let i = 0; i < 15; i++) {
+        for (let j = 0; j < 15; j++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+            cell.dataset.x = i;
+            cell.dataset.y = j;
+
+            cell.onclick = async () => {
+                // Hiển thị quân người ngay lập tức, không chờ server
+                if (cell.innerText !== "") return;
+                cell.innerText = "O";
+                
+                let res = await fetch("/move", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({x: i, y: j})
+                });
+
+                let data = await res.json();
+                render(data.board);
+
+                if (data.winner) {
+                    document.getElementById("status").innerText =
+                        // Đúng
+                        data.winner === "human" ? "Bạn thắng!" :
+                        data.winner === "ai"    ? "AI thắng!"  : "Hoà!";
+                }
+            };
+
+            boardDiv.appendChild(cell);
+        }
+    }
+
+    function render(board) {
+        const cells = document.getElementsByClassName("cell");
+        let index = 0;
+
+        for (let i = 0; i < 15; i++) {
+            for (let j = 0; j < 15; j++) {
+                let val = board[i][j];
+                cells[index].innerText =
+                    val === 1 ? "X" :
+                    val === -1 ? "O" : "";
+                index++;
+            }
+        }
+    }
+
+    async function startGame(first) {
+        let res = await fetch("/start", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({first: first})
+        });
+
+        let data = await res.json();
+        render(data.board);
+        document.getElementById("status").innerText = "Game started";
+    }
+
+    async function resetGame() {
+        let res = await fetch("/reset", {method: "POST"});
+        let data = await res.json();
+        render(data.board);
+        document.getElementById("status").innerText = "Reset game";
+    }
+</script>
+
+</body>
+</html>
