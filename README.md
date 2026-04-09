@@ -1,0 +1,4 @@
+- Git clone hoặc tải zip về
+- Vào cmd trong thư mục -> Tạo môi trường ảo venv ( hoặc không ) qua lệnh python -m venv .venv sau đó dùng lệnh .venv\Scripts\activate
+- Lệnh cài đặt thư viện: pip install -r requirements.txt
+- Lệnh chạy ứng dụng: python app.py
