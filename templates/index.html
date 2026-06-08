@@ -1,113 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-    <title>Gomoku AI</title>
-    <style>
-        body { font-family: Arial; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gomoku AI — Minimax</title>
+    <meta name="description" content="Chơi cờ Gomoku với AI sử dụng thuật toán Minimax Alpha-Beta Pruning. Chọn mức độ khó và thách thức trí tuệ nhân tạo.">
 
-        .board {
-            display: grid;
-            grid-template-columns: repeat(15, 30px);
-            margin-top: 20px;
-        }
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-        .cell {
-            width: 30px;
-            height: 30px;
-            border: 1px solid black;
-            text-align: center;
-            line-height: 30px;
-            cursor: pointer;
-        }
-
-        button {
-            margin-right: 10px;
-        }
-    </style>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
-<h2>Gomoku AI (Minimax)</h2>
+<div class="container">
 
-<button onclick="startGame('human')">Đi trước</button>
-<button onclick="startGame('ai')">Đi sau</button>
-<button onclick="resetGame()">Reset</button>
+    <!-- ===== Header ===== -->
+    <header class="header">
+        <h1 class="title">♟ Gomoku AI</h1>
+        <p class="subtitle">Minimax Algorithm · Alpha-Beta Pruning</p>
+    </header>
 
-<h3 id="status"></h3>
+    <!-- ===== Controls ===== -->
+    <div class="controls" id="controls">
+        <div class="control-group">
+            <span class="control-label">Độ khó</span>
+            <div class="difficulty-selector">
+                <button class="diff-btn" data-level="easy">Dễ</button>
+                <button class="diff-btn active" data-level="medium">Trung bình</button>
+                <button class="diff-btn" data-level="hard">Khó</button>
+            </div>
+        </div>
 
-<div class="board" id="board"></div>
+        <div class="control-group">
+            <span class="control-label">Bắt đầu</span>
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="btnFirst" onclick="startGame('human')">Đi trước</button>
+                <button class="btn btn-secondary" id="btnSecond" onclick="startGame('ai')">Đi sau</button>
+            </div>
+        </div>
+    </div>
 
-<script>
-    const boardDiv = document.getElementById("board");
+    <!-- ===== Game Area ===== -->
+    <div class="game-area">
+        <div class="board-wrapper" id="boardWrapper">
+            <div class="board" id="board"></div>
+        </div>
 
-    // tạo bàn cờ
-    for (let i = 0; i < 15; i++) {
-        for (let j = 0; j < 15; j++) {
-            const cell = document.createElement("div");
-            cell.className = "cell";
-            cell.dataset.x = i;
-            cell.dataset.y = j;
+        <div class="side-controls">
+            <button class="btn-icon" id="btnUndo" onclick="undoMove()" title="Đi lại (Undo)">↩</button>
+            <button class="btn-icon" id="btnReset" onclick="resetGame()" title="Reset">⟳</button>
+        </div>
+    </div>
 
-            cell.onclick = async () => {
-                // Hiển thị quân người ngay lập tức, không chờ server
-                if (cell.innerText !== "") return;
-                cell.innerText = "O";
-                
-                let res = await fetch("/move", {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({x: i, y: j})
-                });
+    <!-- ===== Legend ===== -->
+    <div class="legend">
+        <div class="legend-item">
+            <span class="legend-symbol o-mark">O</span>
+            <span>Bạn</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-symbol x-mark">✕</span>
+            <span>AI</span>
+        </div>
+    </div>
 
-                let data = await res.json();
-                render(data.board);
+    <!-- ===== Status ===== -->
+    <div class="status-bar">
+        <span id="status">Chọn mức độ khó và nhấn bắt đầu</span>
+    </div>
 
-                if (data.winner) {
-                    document.getElementById("status").innerText =
-                        // Đúng
-                        data.winner === "human" ? "Bạn thắng!" :
-                        data.winner === "ai"    ? "AI thắng!"  : "Hoà!";
-                }
-            };
+</div>
 
-            boardDiv.appendChild(cell);
-        }
-    }
+<!-- ===== Result Modal ===== -->
+<div class="modal-overlay" id="resultModal">
+    <div class="modal-card">
+        <div class="modal-emoji" id="resultEmoji">🏆</div>
+        <h2 class="modal-title" id="resultTitle">Kết quả</h2>
+        <p class="modal-text" id="resultText"></p>
+        <button class="btn btn-primary" onclick="hideResult()">Chơi tiếp</button>
+    </div>
+</div>
 
-    function render(board) {
-        const cells = document.getElementsByClassName("cell");
-        let index = 0;
-
-        for (let i = 0; i < 15; i++) {
-            for (let j = 0; j < 15; j++) {
-                let val = board[i][j];
-                cells[index].innerText =
-                    val === 1 ? "X" :
-                    val === -1 ? "O" : "";
-                index++;
-            }
-        }
-    }
-
-    async function startGame(first) {
-        let res = await fetch("/start", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({first: first})
-        });
-
-        let data = await res.json();
-        render(data.board);
-        document.getElementById("status").innerText = "Game started";
-    }
-
-    async function resetGame() {
-        let res = await fetch("/reset", {method: "POST"});
-        let data = await res.json();
-        render(data.board);
-        document.getElementById("status").innerText = "Reset game";
-    }
-</script>
+<!-- Game Logic -->
+<script src="{{ url_for('static', filename='js/game.js') }}"></script>
 
 </body>
 </html>
